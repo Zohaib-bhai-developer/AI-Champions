@@ -10,15 +10,19 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    // Flux-Schnell FREE endpoint
-    const HF_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
+    // HuggingFace FLUX Schnell - FREE but requires token
+    const HF_URL =
+      "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
 
     const response = await fetch(HF_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
+        "Authorization": `Bearer ${process.env.HF_API_KEY}`,
       },
-      body: JSON.stringify({ inputs: prompt }),
+      body: JSON.stringify({
+        inputs: prompt,
+      }),
     });
 
     if (!response.ok) {
@@ -38,3 +42,4 @@ export default async function handler(req, res) {
     res.status(500).json({ error: "Server crashed generating image." });
   }
 }
+
