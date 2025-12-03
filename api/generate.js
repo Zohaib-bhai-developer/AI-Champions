@@ -21,20 +21,9 @@ export default async function handler(req, res) {
 
     let imageUrl = null;
 
-    // CASE 1 — result is array
-    if (Array.isArray(result)) {
-      imageUrl = result[0];
-    }
-
-    // CASE 2 — result has output array
-    if (!imageUrl && result?.output && Array.isArray(result.output)) {
-      imageUrl = result.output[0];
-    }
-
-    // CASE 3 — result single string
-    if (!imageUrl && typeof result === "string") {
-      imageUrl = result;
-    }
+    if (Array.isArray(result)) imageUrl = result[0];
+    if (!imageUrl && result?.output) imageUrl = result.output[0];
+    if (!imageUrl && typeof result === "string") imageUrl = result;
 
     if (!imageUrl) {
       return res.status(500).json({ error: "No image returned from API" });
