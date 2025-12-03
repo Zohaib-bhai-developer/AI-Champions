@@ -1,59 +1,40 @@
 export const config = {
-  runtime: "nodejs", // Force Node runtime on Vercel
+  runtime: "nodejs",
 };
 
-export async function POST(req) {
+export default async function handler(req, res) {
   try {
-    const body = await req.json();
-    const prompt = body.prompt;
+    const { prompt } = req.body;
 
     if (!prompt) {
-      return new Response(
-        JSON.stringify({ error: "Prompt is required" }),
-        { status: 400 }
-      );
+      return res.status(400).json({ error: "Prompt is required" });
     }
 
-    // HuggingFace FREE ENDPOINT
-    const HF_URL =
-      "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2";
+    // Flux-Schnell FREE endpoint
+    const HF_URL = "https://api-inference.huggingface.co/models/black-forest-labs/FLUX.1-schnell";
 
     const response = await fetch(HF_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        inputs: prompt,
-      }),
+      body: JSON.stringify({ inputs: prompt }),
     });
 
     if (!response.ok) {
-      const errText = await response.text();
-      return new Response(
-        JSON.stringify({
-          error: "Model failed to generate image",
-          details: errText,
-        }),
-        { status: 500 }
-      );
+      return res.status(500).json({
+        error: "Model failed to generate image",
+        details: await response.text(),
+      });
     }
 
-    // Return binary image data
     const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
 
-    return new Response(arrayBuffer, {
-      status: 200,
-      headers: {
-        "Content-Type": "image/png",
-      },
-    });
-
+    res.setHeader("Content-Type", "image/png");
+    res.send(buffer);
   } catch (error) {
     console.error("SERVER ERROR:", error);
-    return new Response(
-      JSON.stringify({ error: "Server crashed generating image." }),
-      { status: 500 }
-    );
+    res.status(500).json({ error: "Server crashed generating image." });
   }
 }
