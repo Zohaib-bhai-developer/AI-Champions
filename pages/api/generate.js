@@ -12,26 +12,40 @@ export default async function handler(req, res) {
       auth: process.env.REPLICATE_API_TOKEN,
     });
 
-    const output = await replicate.run(
+    const result = await replicate.run(
       "black-forest-labs/flux-schnell",
       {
         input: { prompt }
       }
     );
 
-    // output ka format kabhi kabhi array hota hai, kabhi single string
-    const imageUrl = Array.isArray(output) ? output[0] : output;
+    let imageUrl = null;
+
+    // CASE 1 — result is array
+    if (Array.isArray(result)) {
+      imageUrl = result[0];
+    }
+
+    // CASE 2 — result has output array
+    if (!imageUrl && result?.output && Array.isArray(result.output)) {
+      imageUrl = result.output[0];
+    }
+
+    // CASE 3 — result single string
+    if (!imageUrl && typeof result === "string") {
+      imageUrl = result;
+    }
 
     if (!imageUrl) {
-      return res.status(500).json({ error: "Image URL missing from API." });
+      return res.status(500).json({ error: "No image returned from API" });
     }
 
     return res.status(200).json({ url: imageUrl });
 
-  } catch (error) {
-    console.error("Error:", error);
+  } catch (err) {
+    console.error("SERVER ERROR:", err);
     return res.status(500).json({
-      error: error.message || "Image generation failed",
+      error: err.message || "Image generation failed",
     });
   }
 }
