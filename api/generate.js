@@ -1,3 +1,7 @@
+export const config = {
+  runtime: "nodejs", // ensure Node runtime (not Edge)
+};
+
 export default async function handler(req, res) {
   try {
     const { prompt } = req.body;
@@ -6,7 +10,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: "Prompt is required" });
     }
 
-    // HuggingFace FREE Inference API endpoint (NO API KEY REQUIRED)
+    // HuggingFace FREE model endpoint
     const HF_URL =
       "https://api-inference.huggingface.co/models/stabilityai/stable-diffusion-2";
 
@@ -15,15 +19,27 @@ export default async function handler(req, res) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ inputs: prompt }),
+      body: JSON.stringify({
+        inputs: prompt,
+      }),
     });
 
-    const arrayBuffer = await response.arrayBuffer();
-    const base64Image = Buffer.from(arrayBuffer).toString("base64");
+    if (!response.ok) {
+      return res.status(500).json({
+        error: "Model failed to generate image",
+        details: await response.text(),
+      });
+    }
 
-    res.status(200).json({ image: base64Image });
+    // Get raw binary image data
+    const arrayBuffer = await response.arrayBuffer();
+    const buffer = Buffer.from(arrayBuffer);
+
+    // Send actual PNG binary
+    res.setHeader("Content-Type", "image/png");
+    res.send(buffer);
   } catch (error) {
-    console.error("Error:", error);
-    res.status(500).json({ error: "Image generation failed" });
+    console.error("SERVER ERROR:", error);
+    res.status(500).json({ error: "Server crashed generating image." });
   }
 }
